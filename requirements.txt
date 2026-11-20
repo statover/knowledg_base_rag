@@ -1,0 +1,17 @@
+# 大模型与Agent框架
+langchain
+langchain-deepseek
+langgraph
+# 向量数据库（官方独立维护）
+langchain-chroma
+# 文本切分（独立维护包）
+langchain-text-splitters
+# 网页界面
+gradio
+# PDF文件读取
+pypdf
+# 本地Embedding模型
+modelscope
+sentence-transformers
+# 环境变量管理
+python-dotenv
