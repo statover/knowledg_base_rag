@@ -1,10 +1,18 @@
-from app.logger import logger
-import os
 import gradio as gr
+import os
+import uuid
+from app.config import CHROMA_PERSIST_DIR
 from app.rag_agent import RAGAgent
+from app.logger import logger
 
 #全局初始化智能体
-rag_agent = RAGAgent(init_file="data/test.txt")
+if os.path.exists(CHROMA_PERSIST_DIR):
+    logger.info("检测到已有向量库，直接加载")
+    rag_agent = RAGAgent()
+else:
+    logger.info("首次运行，初始化示例知识库")
+    rag_agent = RAGAgent(init_file="data/test.txt")
+
 
 #处理文件上传
 def upload_document(file_path):
@@ -22,19 +30,17 @@ def upload_document(file_path):
         return "上传成功！文档已经加入知识库，可以开始提问了"
 
     except Exception as e:
-        return f"上传失败：{str(e)}"
-    except Exception as e:
         logger.error(f"文件上传失败：{str(e)}", exc_info=True)
         return"上传失败，请检查文件格式后重试"
 
 #处理聊天回复
 #参数message：用户刚输入的最新一条消息
 #参数history：聊天框里全部历史记录，格式是字典列表
-def chat_respond(message, history):
+def chat_respond(message, history, session_id):
     """用户发消息后，调用Agent拿到回答，更新来聊天界面"""
     #调用RAG智能体的chat方法，传入问题和会话ID
     #thread_id固定为web_user，同为一个网页窗口共享记忆
-    bot_answer = rag_agent.chat(message, thread_id="web_user")
+    bot_answer = rag_agent.chat(message, thread_id=session_id)
     #把用户说的话追加到聊天记录里去
     history.append({"role": "user", "content": message})
     #把AI的回答追加到聊天历史里
@@ -46,6 +52,9 @@ def chat_respond(message, history):
 #绘制网页界面
 #Blocks是Gradio的自定义布局模式，可以自由摆放组件，比现成的ChatInterface更灵活
 with gr.Blocks(title="智能知识库问答系统") as demo:
+    # gr.State 每个用户独立，刷新页面就会重新生成
+    session_id = gr.State(lambda: uuid.uuid4().hex)
+
     gr.Markdown("知识库问答系统")
     gr.Markdown("基于RAG检索增强生成技术，上传TXT/PDF文档即可自然语言问答")
     gr.Markdown("使用说明：上传文档后即可提问，支持多轮对话追问")
@@ -100,13 +109,13 @@ with gr.Blocks(title="智能知识库问答系统") as demo:
 #输出：清空输入框 + 更新聊天历史界面
     submit_btn.click(
         fn=chat_respond,
-        inputs=[msg_input, chatbot],
+        inputs=[msg_input, chatbot, session_id],
         outputs=[msg_input, chatbot]
     )
 
     msg_input.submit(
         fn=chat_respond,
-        inputs=[msg_input, chatbot],
+        inputs=[msg_input, chatbot, session_id],
         outputs=[msg_input, chatbot]
     )
 

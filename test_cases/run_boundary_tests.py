@@ -124,10 +124,15 @@ def run_all_tests():
     try:
         rag.add_file(case6)
         print_result(6, "乱码/GBK文件", False, "未做编码兜底，可能读取失败或乱码")
-    except UnicodeDecodeError:
-        print_result(6, "乱码/GBK文件", True, "成功捕获编码错误并返回提示")
+    except ValueError as e:
+        # 业务层抛出的编码错误提示，符合预期
+        if "编码不支持" in str(e):
+            print_result(6, "乱码/GBK文件", True, "精准捕获编码错误并返回友好提示")
+        else:
+            print_result(6, "乱码/GBK文件", False, f"非预期错误：{str(e)}")
     except Exception as e:
-        print_result(6, "乱码/GBK文件", True, f"异常兜底：{str(e)}")
+        # 其他类型的异常都算不通过，说明我们的异常捕获不精准
+        print_result(6, "乱码/GBK文件", False, f"非预期异常类型：{type(e).__name__}")
 
     # 7. 连续快速提问
     try:

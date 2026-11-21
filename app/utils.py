@@ -27,12 +27,16 @@ def load_text_file(file_path: str) -> list[Document]:
         # 包装成标准Document，加上来源元数据
         return [Document(page_content=content, metadata={"source": file_path})]
 
-    except UnboundLocalError:
+    except UnicodeDecodeError:
         #编码错误单独捕获，给用户明确提示
-        logger.error(f"文件编码错误：{file_path}")
+        logger.error(f"文件编码错误：{file_path}，不是UTF-8编码")
+        # 抛出明确的业务错误，上层可以直接展示给用户
         raise ValueError("文件编码不支持，请使用UTF-8编码的TXT文件")
+
+    # 其他未知错误再走兜底，记完整错误日志
     except Exception as e:
         logger.error(f"TXT文件加载失败：{str(e)}", exc_info=True)
+        # 继续往上抛，让上一层统一处理
         raise
 
 
